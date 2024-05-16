@@ -9,16 +9,34 @@ from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
 from langchain.llms import HuggingFaceHub
-
+import docx2txt
+from pathlib import Path
+import os
+# def get_pdf_text(pdf_docs):
+#     text = ""
+#     for pdf in pdf_docs:
+#         pdf_reader = PdfReader(pdf)
+#         for page in pdf_reader.pages:
+#             text += page.extract_text()
+#     return text
 def get_pdf_text(pdf_docs):
     text = ""
-    for pdf in pdf_docs:
-        pdf_reader = PdfReader(pdf)
-        for page in pdf_reader.pages:
-            text += page.extract_text()
+    for txt_file in pdf_docs:
+        print(txt_file)
+        print(txt_file.name)
+        extension = Path(txt_file.name).suffix
+        if extension == '.pdf':
+            pdf_reader = PdfReader(txt_file)
+            for page in pdf_reader.pages:
+                text += page.extract_text() if page.extract_text() else ''
+        elif extension == '.txt':
+            text += txt_file.read().decode('utf-8')
+        elif extension == '.docx':
+            text += docx2txt.process(txt_file)
+        else:
+            raise ValueError("Unsupported file type")
+
     return text
-
-
 def get_text_chunks(text):
     text_splitter = CharacterTextSplitter(
         separator="\n",
@@ -38,7 +56,7 @@ def get_vectorstore(text_chunks):
 
 
 def get_conversation_chain(vectorstore):
-    llm = ChatOpenAI()
+    llm = ChatOpenAI(model_name="gpt-4o")
     # llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
 
     memory = ConversationBufferMemory(
